@@ -1,5 +1,5 @@
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 import datetime
 
 # Словарь для хранения этапов пользователя
@@ -13,7 +13,7 @@ def main_menu_keyboard():
     return ReplyKeyboardMarkup([['Добавить', 'Список', 'Инфо']], resize_keyboard=True)
 
 # Функция для запуска бота
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, context):
     user_id = update.message.from_user.id
     # Если у пользователя нет напоминаний, создаем пустой список
     if user_id not in reminders:
@@ -23,7 +23,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("О чём нужно напомнить?", reply_markup=main_menu_keyboard())
 
 # Функция для обработки нажатия на кнопку "Инфо"
-async def show_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def show_info(update: Update, context):
     info_message = (
         "Это бот для напоминаний\n\n"
         "Формат даты - dd.mm.yyyy\n"
@@ -35,7 +35,7 @@ async def show_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(info_message, parse_mode="Markdown", disable_web_page_preview=True)
 
 # Обработчик текстовых сообщений
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_message(update: Update, context):
     user_id = update.message.from_user.id
     message_text = update.message.text
 
@@ -48,26 +48,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif user_stage.get(user_id) == 'reminder_text':
         reminders[user_id].append({'text': message_text, 'date': '', 'time': ''})
         user_stage[user_id] = 'reminder_date'
-        await update.message.reply_text("Когда нужно напомнить?", reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("Сегодня", callback_data='today'),
-             InlineKeyboardButton("Завтра", callback_data='tomorrow')]
-        ]))
+        await update.message.reply_text("Когда нужно напомнить?", reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("Сегодня", callback_data='today'),
+            InlineKeyboardButton("Завтра", callback_data='tomorrow')
+        ]]))
     elif user_stage.get(user_id) == 'reminder_date':
         try:
             datetime.datetime.strptime(message_text, '%d.%m.%Y')
             reminders[user_id][-1]['date'] = message_text
             user_stage[user_id] = 'reminder_time'
-            await update.message.reply_text("Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("+1 мин", callback_data='plus_one'),
-                 InlineKeyboardButton("+5 мин", callback_data='plus_five')]
-            ]))
+            await update.message.reply_text("Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("+1 мин", callback_data='plus_one'),
+                InlineKeyboardButton("+5 мин", callback_data='plus_five')
+            ]]))
         except ValueError:
             await update.message.reply_text("Неверный формат даты! Пожалуйста, введи дату в формате DD.MM.YYYY")
     elif user_stage.get(user_id) == 'reminder_time':
         await update.message.reply_text("Пожалуйста, введи время в формате HH:MM")
 
 # Обработчик команды /list
-async def show_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def show_reminders(update: Update, context):
     user_id = update.message.from_user.id
     current_time = datetime.datetime.now()
 
@@ -95,7 +95,7 @@ async def show_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("У тебя нет напоминаний")
 
 # Функция для отправки уведомлений
-async def send_reminder(context: ContextTypes.DEFAULT_TYPE):
+async def send_reminder(context):
     job = context.job
     await context.bot.send_message(
         chat_id=job.data['chat_id'],
@@ -104,31 +104,31 @@ async def send_reminder(context: ContextTypes.DEFAULT_TYPE):
     )
 
 # Обработчик нажатий на кнопки
-async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_callback(update: Update, context):
     query = update.callback_query
     await query.answer()
 
     user_id = query.from_user.id
     if query.data == 'today':
         reminders[user_id][-1]['date'] = datetime.datetime.now().strftime('%d.%m.%Y')
-        await query.edit_message_text(text=f"Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("+1 мин", callback_data='plus_one'),
-             InlineKeyboardButton("+5 мин", callback_data='plus_five')]
-        ]))
+        await query.edit_message_text(text=f"Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("+1 мин", callback_data='plus_one'),
+            InlineKeyboardButton("+5 мин", callback_data='plus_five')
+        ]]))
     elif query.data == 'tomorrow':
         reminders[user_id][-1]['date'] = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%d.%m.%Y')
-        await query.edit_message_text(text=f"Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("+1 мин", callback_data='plus_one'),
-             InlineKeyboardButton("+5 мин", callback_data='plus_five')]
-        ]))
+        await query.edit_message_text(text=f"Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("+1 мин", callback_data='plus_one'),
+            InlineKeyboardButton("+5 мин", callback_data='plus_five')
+        ]]))
     elif query.data == 'plus_one':
         reminder_time = (datetime.datetime.now() + datetime.timedelta(minutes=1)).strftime('%H:%M')
         reminders[user_id][-1]['time'] = reminder_time
-        await confirm_reminder(update, user_id, reminder_time, context)  # Передаем context
+        await confirm_reminder(update, user_id, reminder_time, context)
     elif query.data == 'plus_five':
         reminder_time = (datetime.datetime.now() + datetime.timedelta(minutes=5)).strftime('%H:%M')
         reminders[user_id][-1]['time'] = reminder_time
-        await confirm_reminder(update, user_id, reminder_time, context)  # Передаем context
+        await confirm_reminder(update, user_id, reminder_time, context)
 
 async def confirm_reminder(update: Update, user_id, reminder_time, context):
     reminder = reminders[user_id][-1]
@@ -137,7 +137,6 @@ async def confirm_reminder(update: Update, user_id, reminder_time, context):
         parse_mode="Markdown"
     )
 
-    # Запланировать отправку напоминания
     reminder_datetime = datetime.datetime.strptime(f"{reminder['date']} {reminder_time}", '%d.%m.%Y %H:%M')
     current_time = datetime.datetime.now()
 
@@ -154,7 +153,7 @@ async def confirm_reminder(update: Update, user_id, reminder_time, context):
 
 # Функция для запуска приложения
 if __name__ == '__main__':
-    app = ApplicationBuilder().token("8074930958:AAF0TEJqjDKnI1QJHSJcE2seK9ccnMpcjDA").build()
+    app = Application.builder().token("8074930958:AAF0TEJqjDKnI1QJHSJcE2seK9ccnMpcjDA").build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
