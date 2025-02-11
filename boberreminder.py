@@ -1,8 +1,6 @@
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 import datetime
-from flask import Flask
-from threading import Thread
 
 # Словарь для хранения этапов пользователя
 user_stage = {}
@@ -50,18 +48,18 @@ async def handle_message(update: Update, context):
     elif user_stage.get(user_id) == 'reminder_text':
         reminders[user_id].append({'text': message_text, 'date': '', 'time': ''})
         user_stage[user_id] = 'reminder_date'
-        await update.message.reply_text("Когда нужно напомнить?", reply_markup=InlineKeyboardMarkup([[ 
-            InlineKeyboardButton("Сегодня", callback_data='today'), 
-            InlineKeyboardButton("Завтра", callback_data='tomorrow') 
+        await update.message.reply_text("Когда нужно напомнить?", reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("Сегодня", callback_data='today'),
+            InlineKeyboardButton("Завтра", callback_data='tomorrow')
         ]]))
     elif user_stage.get(user_id) == 'reminder_date':
         try:
             datetime.datetime.strptime(message_text, '%d.%m.%Y')
             reminders[user_id][-1]['date'] = message_text
             user_stage[user_id] = 'reminder_time'
-            await update.message.reply_text("Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([[ 
+            await update.message.reply_text("Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("+1 мин", callback_data='plus_one'),
-                InlineKeyboardButton("+5 мин", callback_data='plus_five') 
+                InlineKeyboardButton("+5 мин", callback_data='plus_five')
             ]]))
         except ValueError:
             await update.message.reply_text("Неверный формат даты! Пожалуйста, введи дату в формате DD.MM.YYYY")
@@ -113,15 +111,15 @@ async def handle_callback(update: Update, context):
     user_id = query.from_user.id
     if query.data == 'today':
         reminders[user_id][-1]['date'] = datetime.datetime.now().strftime('%d.%m.%Y')
-        await query.edit_message_text(text=f"Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([[ 
-            InlineKeyboardButton("+1 мин", callback_data='plus_one'), 
-            InlineKeyboardButton("+5 мин", callback_data='plus_five') 
+        await query.edit_message_text(text=f"Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("+1 мин", callback_data='plus_one'),
+            InlineKeyboardButton("+5 мин", callback_data='plus_five')
         ]]))
     elif query.data == 'tomorrow':
         reminders[user_id][-1]['date'] = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime('%d.%m.%Y')
-        await query.edit_message_text(text=f"Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([[ 
-            InlineKeyboardButton("+1 мин", callback_data='plus_one'), 
-            InlineKeyboardButton("+5 мин", callback_data='plus_five') 
+        await query.edit_message_text(text=f"Во сколько нужно напомнить?", reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("+1 мин", callback_data='plus_one'),
+            InlineKeyboardButton("+5 мин", callback_data='plus_five')
         ]]))
     elif query.data == 'plus_one':
         reminder_time = (datetime.datetime.now() + datetime.timedelta(minutes=1)).strftime('%H:%M')
@@ -153,20 +151,8 @@ async def confirm_reminder(update: Update, user_id, reminder_time, context):
     else:
         await update.callback_query.message.reply_text("Указанное время уже прошло! Пожалуйста, укажи время в будущем")
 
-# Flask приложение для health check
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return "Bot is running"
-
-# Функция для запуска бота и Flask-сервера в отдельных потоках
-def run():
-    # Запуск бота в отдельном потоке
-    from threading import Thread
-    Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 8000}).start()
-
-    # Запуск основного бота
+# Функция для запуска приложения
+if __name__ == '__main__':
     app = Application.builder().token("8074930958:AAF0TEJqjDKnI1QJHSJcE2seK9ccnMpcjDA").build()
 
     app.add_handler(CommandHandler("start", start))
@@ -176,6 +162,3 @@ def run():
 
     # Запуск бота
     app.run_polling()
-
-if __name__ == '__main__':
-    run()
