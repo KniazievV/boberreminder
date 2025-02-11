@@ -1,1 +1,1 @@
-worker: python boberreminder.py
+web: python boberreminder.py
